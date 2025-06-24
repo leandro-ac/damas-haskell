@@ -129,3 +129,17 @@ lerPos [col, lin]
   | toUpper col `elem` ['A'..'H'], lin `elem` ['1'..'8'] =
       Just (8 - (ord lin - ord '0'), ord (toUpper col) - ord 'A')
 lerPos _ = Nothing
+
+jogadaIA :: Tabuleiro -> Jogador -> Maybe (Pos, Pos)
+jogadaIA tab j =
+  let poss = [ ((l,c), dest) |
+                l <- [0..7], c <- [0..7],
+                emJogo tab (l,c) == Just (Peca j Piao) || emJogo tab (l,c) == Just (Peca j Dama),
+                let caps = capturasPossiveis tab j (l,c),
+                (dest, _) <- caps ] ++
+             [ ((l,c), dest) |
+                l <- [0..7], c <- [0..7],
+                emJogo tab (l,c) == Just (Peca j Piao) || emJogo tab (l,c) == Just (Peca j Dama),
+                dest <- movimentosPeca tab j (l,c) ]
+  in if null poss then Nothing else Just (head poss)
+
