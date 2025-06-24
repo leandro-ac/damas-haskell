@@ -43,7 +43,7 @@ mostrarCasa (Escura (Just (Peca B Dama))) = " B "  -- Dama jogador B maiúsculo
 mostrarTabuleiro :: Tabuleiro -> String
 mostrarTabuleiro tab =
   let cabecalho = "   " ++ concat [ " " ++ [chr (c + 65)] ++ " " | c <- [0..7] ]  -- Letras A-H no topo
-      linhas = [ show (8 - r) ++ " " ++ concatMap mostrarCasa linha | (r, linha) <- zip [0..] (reverse tab) ]
+      linhas = [ show (r + 1) ++ " " ++ concatMap mostrarCasa linha | (r, linha) <- zip [0..] tab ]
   in unlines (cabecalho : linhas)
 
 -- Retorna a peça na posição dada se estiver dentro do tabuleiro e for casa escura
@@ -141,7 +141,7 @@ setar tab (l,c) val =
 lerPos :: String -> Maybe Pos
 lerPos [col, lin]
   | toUpper col `elem` ['A'..'H'], lin `elem` ['1'..'8'] =
-      Just (8 - (ord lin - ord '0'), ord (toUpper col) - ord 'A')
+      Just ((ord lin - ord '1'), ord (toUpper col) - ord 'A')
 lerPos _ = Nothing
 
 -- IA simples: escolhe o primeiro movimento válido encontrado (captura ou movimento)
@@ -192,7 +192,7 @@ jogar tab j (ehHumanoA, ehHumanoB) = do
     proximo B = A
     erro = putStrLn "Entrada inválida." >> jogar tab j (ehHumanoA, ehHumanoB)
     -- Exibe posição no formato padrão (ex: A3)
-    showPos (l,c) = [chr (c + 65)] ++ show (8 - l)
+    showPos (l,c) = [chr (c + 65)] ++ show (l + 1)
 
 -- Menu principal do jogo
 menu :: IO ()
@@ -211,7 +211,7 @@ menu = do
       j <- getLine
       case map toUpper j of
         "A" -> jogar tabuleiroInicial A (True, False)
-        "B" -> jogar tabuleiroInicial A (False, True)
+        "B" -> jogar tabuleiroInicial B (False, True)
         _   -> putStrLn "Escolha inválida." >> menu
     "2" -> jogar tabuleiroInicial A (False, False)
     "3" -> putStrLn "Saindo..."
