@@ -3,7 +3,10 @@
 -- Leandro ALvares de Carvalho 202065211A
 -- Vinicius ....
 
-import Data.Char (chr, ord)
+import Data.Char (toUpper, chr, ord)
+import Data.Maybe (isJust)
+import System.IO (hFlush, stdout)
+import Control.Concurrent (threadDelay)
 
 module Main where
 
