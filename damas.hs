@@ -1,6 +1,5 @@
 -- Jogo de Damas em Haskell
--- Autores:
--- Leandro Alvares
+-- Leandro Alvares de Carvalho 202065211A
 -- Vinicius
 
 import Data.Char (toUpper, chr, ord)
@@ -17,34 +16,37 @@ data Casa = Clara | Escura (Maybe Peca) deriving (Eq, Show)
 type Tabuleiro = [[Casa]]
 type Pos = (Int, Int)
 
--- Inicializa o tabuleiro
+-- Inicializa o tabuleiro com peças nas posições iniciais
 tabuleiroInicial :: Tabuleiro
 tabuleiroInicial = [ [inicial r c | c <- [0..7]] | r <- [0..7] ]
   where
+    -- Cada casa par é escura e pode ter peça, as outras são claras (vazias)
     inicial l c
       | (l + c) `mod` 2 == 0 = Escura (pecaInicial l)
       | otherwise            = Clara
+    -- Define as peças iniciais para os três primeiros e três últimos filas
     pecaInicial l
       | l <= 2 = Just (Peca A Piao)
       | l >= 5 = Just (Peca B Piao)
       | otherwise = Nothing
 
--- Exibição
+-- Exibição de uma casa no tabuleiro
 mostrarCasa :: Casa -> String
-mostrarCasa Clara = " . "
-mostrarCasa (Escura Nothing) = "   "
-mostrarCasa (Escura (Just (Peca A Piao))) = " a "
-mostrarCasa (Escura (Just (Peca A Dama))) = " A "
-mostrarCasa (Escura (Just (Peca B Piao))) = " b "
-mostrarCasa (Escura (Just (Peca B Dama))) = " B "
+mostrarCasa Clara = " . "                   -- Casa clara representada por ponto
+mostrarCasa (Escura Nothing) = "   "         -- Casa escura vazia é espaço em branco
+mostrarCasa (Escura (Just (Peca A Piao))) = " a "  -- Peão jogador A minúsculo
+mostrarCasa (Escura (Just (Peca A Dama))) = " A "  -- Dama jogador A maiúsculo
+mostrarCasa (Escura (Just (Peca B Piao))) = " b "  -- Peão jogador B minúsculo
+mostrarCasa (Escura (Just (Peca B Dama))) = " B "  -- Dama jogador B maiúsculo
 
+-- Exibe o tabuleiro completo em formato legível, com colunas e linhas rotuladas
 mostrarTabuleiro :: Tabuleiro -> String
 mostrarTabuleiro tab =
-  let cabecalho = "   " ++ concat [ " " ++ [chr (c + 65)] ++ " " | c <- [0..7] ]
+  let cabecalho = "   " ++ concat [ " " ++ [chr (c + 65)] ++ " " | c <- [0..7] ]  -- Letras A-H no topo
       linhas = [ show (8 - r) ++ " " ++ concatMap mostrarCasa linha | (r, linha) <- zip [0..] (reverse tab) ]
   in unlines (cabecalho : linhas)
 
--- Auxiliares
+-- Retorna a peça na posição dada se estiver dentro do tabuleiro e for casa escura
 emJogo :: Tabuleiro -> Pos -> Maybe Peca
 emJogo tab (l,c)
   | l < 0 || l > 7 || c < 0 || c > 7 = Nothing
@@ -52,43 +54,47 @@ emJogo tab (l,c)
                   Escura mp -> mp
                   _ -> Nothing
 
+-- Verifica se a posição está dentro do tabuleiro
 dentro :: Pos -> Bool
 dentro (l,c) = l >= 0 && l <= 7 && c >= 0 && c <= 7
 
+-- Verifica se uma peça pertence ao jogador adversário
 ehAdversario :: Jogador -> Maybe Peca -> Bool
 ehAdversario j (Just (Peca j' _)) = j /= j'
 ehAdversario _ _ = False
 
--- Movimentos possíveis para peões e damas
+-- Direções válidas de movimento para peões (A anda para baixo, B para cima)
 direcoesPiao :: Jogador -> [(Int, Int)]
 direcoesPiao A = [(1, -1), (1, 1)]
 direcoesPiao B = [(-1, -1), (-1, 1)]
 
+-- Todas as direções possíveis de salto (diagonais)
 todosSaltos :: [(Int, Int)]
 todosSaltos = [(-1,-1), (-1,1), (1,-1), (1,1)]
 
+-- Lista movimentos possíveis para uma peça na posição dada
 movimentosPeca :: Tabuleiro -> Jogador -> Pos -> [Pos]
 movimentosPeca tab j (l,c) =
   case emJogo tab (l,c) of
     Just (Peca _ Piao) ->
-      [ (l+dl, c+dc) |
+      [ (l+dl, c+dc) |                    -- Movimento simples do peão
         (dl, dc) <- direcoesPiao j,
         dentro (l+dl, c+dc),
         emJogo tab (l+dl, c+dc) == Nothing ]
     Just (Peca _ Dama) ->
-      [ (l+i*dl, c+i*dc) |
+      [ (l+i*dl, c+i*dc) |                -- Movimento livre da dama nas diagonais
         (dl,dc) <- todosSaltos, i <- [1..7],
         let pos = (l+i*dl, c+i*dc),
         dentro pos,
         emJogo tab pos == Nothing ]
     _ -> []
 
--- Captura
+-- Calcula as capturas possíveis para peões e damas na posição dada
 capturasPossiveis :: Tabuleiro -> Jogador -> Pos -> [(Pos, Pos)]
 capturasPossiveis tab j (l,c) =
   case emJogo tab (l,c) of
     Just (Peca _ Piao) -> 
-      [ ((l+2*dl, c+2*dc), (l+dl, c+dc)) |
+      [ ((l+2*dl, c+2*dc), (l+dl, c+dc)) |   -- Destino e posição da peça capturada
         (dl,dc) <- todosSaltos,
         let alvo = (l+dl, c+dc),
         let dest = (l+2*dl, c+2*dc),
@@ -96,58 +102,64 @@ capturasPossiveis tab j (l,c) =
         ehAdversario j (emJogo tab alvo),
         emJogo tab dest == Nothing ]
     Just (Peca _ Dama) ->
-      concatMap (buscaDama (l,c)) todosSaltos
+      concatMap (buscaDama (l,c)) todosSaltos   -- Capturas possíveis para dama em todas direções
     _ -> []
 
   where
+    -- Para damas, percorre na direção indicada procurando adversário seguido de casa vazia para captura
     buscaDama (r,c) (dl,dc) = 
       let linha = [(r+i*dl, c+i*dc) | i <- [1..7], dentro (r+i*dl, c+i*dc)]
           salto (p1:p2:ps) =
             case (emJogo tab p1, emJogo tab p2) of
-              (Just adv, Nothing) | ehAdversario j (Just adv) -> [(p2, p1)]
-              (Nothing, _) -> salto (p2:ps)
+              (Just adv, Nothing) | ehAdversario j (Just adv) -> [(p2, p1)]  -- Captura válida encontrada
+              (Nothing, _) -> salto (p2:ps)    -- Continua procurando na linha
               _ -> []
           salto _ = []
       in salto linha
 
--- Executa jogada
+-- Realiza o movimento da peça no tabuleiro
+-- Se for um movimento de captura, remove a peça capturada
+-- Se o peão chegar à última linha adversária, promove a dama
 mover :: Tabuleiro -> Pos -> Pos -> Tabuleiro
 mover tab de para =
   let Just (Peca j t) = emJogo tab de
+      -- Promove peão a dama ao alcançar última linha
       t' = if (j == A && fst para == 7) || (j == B && fst para == 0) then Dama else t
-      limpa = setar tab de (Escura Nothing)
-      capt = if abs (fst para - fst de) == 2
+      limpa = setar tab de (Escura Nothing)   -- Remove peça da posição original
+      capt = if abs (fst para - fst de) == 2  -- Movimento de salto (captura)
              then let meio = ((fst de + fst para) `div` 2, (snd de + snd para) `div` 2)
-                  in setar limpa meio (Escura Nothing)
+                  in setar limpa meio (Escura Nothing)  -- Remove peça capturada
              else limpa
-  in setar capt para (Escura (Just (Peca j t')))
+  in setar capt para (Escura (Just (Peca j t'))) -- Coloca peça na posição destino
 
+-- Atualiza o tabuleiro na posição especificada com a nova casa
 setar :: Tabuleiro -> Pos -> Casa -> Tabuleiro
 setar tab (l,c) val =
   take l tab ++ [take c (tab !! l) ++ [val] ++ drop (c+1) (tab !! l)] ++ drop (l+1) tab
 
--- Entrada
+-- Lê uma posição no formato "A3" e converte para coordenadas internas (linha, coluna)
 lerPos :: String -> Maybe Pos
 lerPos [col, lin]
   | toUpper col `elem` ['A'..'H'], lin `elem` ['1'..'8'] =
       Just (8 - (ord lin - ord '0'), ord (toUpper col) - ord 'A')
 lerPos _ = Nothing
 
--- IA simples: escolhe primeiro movimento válido
+-- IA simples: escolhe o primeiro movimento válido encontrado (captura ou movimento)
 jogadaIA :: Tabuleiro -> Jogador -> Maybe (Pos, Pos)
 jogadaIA tab j =
-  let poss = [ ((l,c), dest) |
+  let poss = [ ((l,c), dest) |                -- Capturas possíveis primeiro
                 l <- [0..7], c <- [0..7],
                 emJogo tab (l,c) == Just (Peca j Piao) || emJogo tab (l,c) == Just (Peca j Dama),
                 let caps = capturasPossiveis tab j (l,c),
                 (dest, _) <- caps ] ++
-             [ ((l,c), dest) |
+             [ ((l,c), dest) |                 -- Depois movimentos simples
                 l <- [0..7], c <- [0..7],
                 emJogo tab (l,c) == Just (Peca j Piao) || emJogo tab (l,c) == Just (Peca j Dama),
                 dest <- movimentosPeca tab j (l,c) ]
   in if null poss then Nothing else Just (head poss)
 
--- Loop do jogo
+-- Loop principal do jogo
+-- Exibe tabuleiro, lê jogada do jogador humano ou IA, verifica validade e alterna turnos
 jogar :: Tabuleiro -> Jogador -> (Bool, Bool) -> IO ()
 jogar tab j (ehHumanoA, ehHumanoB) = do
   putStrLn $ "\nTurno do jogador: " ++ show j
@@ -161,6 +173,7 @@ jogar tab j (ehHumanoA, ehHumanoB) = do
       [origem, destino] ->
         case (lerPos origem, lerPos destino) of
           (Just de, Just para) ->
+            -- Verifica se destino é válido (movimento normal ou captura)
             if para `elem` map fst (capturasPossiveis tab j de) || para `elem` movimentosPeca tab j de
               then jogar (mover tab de para) (proximo j) (ehHumanoA, ehHumanoB)
               else putStrLn "Movimento inválido." >> jogar tab j (ehHumanoA, ehHumanoB)
@@ -178,9 +191,10 @@ jogar tab j (ehHumanoA, ehHumanoB) = do
     proximo A = B
     proximo B = A
     erro = putStrLn "Entrada inválida." >> jogar tab j (ehHumanoA, ehHumanoB)
+    -- Exibe posição no formato padrão (ex: A3)
     showPos (l,c) = [chr (c + 65)] ++ show (8 - l)
 
--- Menu
+-- Menu principal do jogo
 menu :: IO ()
 menu = do
   putStrLn "\n== JOGO DE DAMAS =="
