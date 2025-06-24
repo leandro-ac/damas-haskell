@@ -65,7 +65,18 @@ emJogo tab (l,c)
 dentro :: Pos -> Bool
 dentro (l,c) = l >= 0 && l <= 7 && c >= 0 && c <= 7
 
--- Retorna os movimentos possíveis para uma peça simples
+ehAdversario :: Jogador -> Maybe Peca -> Bool
+ehAdversario j (Just (Peca j' _)) = j /= j'
+ehAdversario _ _ = False
+
+-- Movimentos possíveis para peões e damas
+direcoesPiao :: Jogador -> [(Int, Int)]
+direcoesPiao A = [(1, -1), (1, 1)]
+direcoesPiao B = [(-1, -1), (-1, 1)]
+
+todosSaltos :: [(Int, Int)]
+todosSaltos = [(-1,-1), (-1,1), (1,-1), (1,1)]
+
 movimentosPeca :: Tabuleiro -> Jogador -> Pos -> [Pos]
 movimentosPeca tab j (l,c) =
   case emJogo tab (l,c) of
@@ -74,26 +85,15 @@ movimentosPeca tab j (l,c) =
         (dl, dc) <- direcoesPiao j,
         dentro (l+dl, c+dc),
         emJogo tab (l+dl, c+dc) == Nothing ]
+    Just (Peca _ Dama) ->
+      [ (l+i*dl, c+i*dc) |
+        (dl,dc) <- todosSaltos, i <- [1..7],
+        let pos = (l+i*dl, c+i*dc),
+        dentro pos,
+        emJogo tab pos == Nothing ]
     _ -> []
 
--- No momento da movimentação:
-t' = if (j == A && fst para == 7) || (j == B && fst para == 0) then Dama else t
-
-todosSaltos :: [(Int, Int)]
-todosSaltos = [(-1,-1), (-1,1), (1,-1), (1,1)]
-
-movimentosPeca tab j (l,c) = ...
-  Just (Peca _ Dama) ->
-    [ (l+i*dl, c+i*dc) |
-      (dl,dc) <- todosSaltos, i <- [1..7],
-      let pos = (l+i*dl, c+i*dc),
-      dentro pos,
-      emJogo tab pos == Nothing ]
-
-ehAdversario :: Jogador -> Maybe Peca -> Bool
-ehAdversario j (Just (Peca j' _)) = j /= j'
-ehAdversario _ _ = False
-
+-- Captura
 capturasPossiveis :: Tabuleiro -> Jogador -> Pos -> [(Pos, Pos)]
 capturasPossiveis tab j (l,c) =
   case emJogo tab (l,c) of
@@ -109,10 +109,18 @@ capturasPossiveis tab j (l,c) =
       concatMap (buscaDama (l,c)) todosSaltos
     _ -> []
 
-setar :: Tabuleiro -> Pos -> Casa -> Tabuleiro
-setar tab (l,c) val =
-  take l tab ++ [take c (tab !! l) ++ [val] ++ drop (c+1) (tab !! l)] ++ drop (l+1) tab
+  where
+    buscaDama (r,c) (dl,dc) = 
+      let linha = [(r+i*dl, c+i*dc) | i <- [1..7], dentro (r+i*dl, c+i*dc)]
+          salto (p1:p2:ps) =
+            case (emJogo tab p1, emJogo tab p2) of
+              (Just adv, Nothing) | ehAdversario j (Just adv) -> [(p2, p1)]
+              (Nothing, _) -> salto (p2:ps)
+              _ -> []
+          salto _ = []
+      in salto linha
 
+-- Executa jogada
 mover :: Tabuleiro -> Pos -> Pos -> Tabuleiro
 mover tab de para =
   let Just (Peca j t) = emJogo tab de
@@ -124,12 +132,18 @@ mover tab de para =
              else limpa
   in setar capt para (Escura (Just (Peca j t')))
 
+setar :: Tabuleiro -> Pos -> Casa -> Tabuleiro
+setar tab (l,c) val =
+  take l tab ++ [take c (tab !! l) ++ [val] ++ drop (c+1) (tab !! l)] ++ drop (l+1) tab
+
+-- Entrada
 lerPos :: String -> Maybe Pos
 lerPos [col, lin]
   | toUpper col `elem` ['A'..'H'], lin `elem` ['1'..'8'] =
       Just (8 - (ord lin - ord '0'), ord (toUpper col) - ord 'A')
 lerPos _ = Nothing
 
+-- IA simples: escolhe primeiro movimento válido
 jogadaIA :: Tabuleiro -> Jogador -> Maybe (Pos, Pos)
 jogadaIA tab j =
   let poss = [ ((l,c), dest) |
@@ -143,4 +157,63 @@ jogadaIA tab j =
                 dest <- movimentosPeca tab j (l,c) ]
   in if null poss then Nothing else Just (head poss)
 
-  jogar :: Tabuleiro -> Jogador -> (Bool, Bool) -> IO ()
+-- Loop do jogo
+jogar :: Tabuleiro -> Jogador -> (Bool, Bool) -> IO ()
+jogar tab j (ehHumanoA, ehHumanoB) = do
+  putStrLn $ "\nTurno do jogador: " ++ show j
+  putStrLn $ mostrarTabuleiro tab
+  let humano = if j == A then ehHumanoA else ehHumanoB
+  if humano then do
+    putStr "Digite movimento (ex: A3 B4): "
+    hFlush stdout
+    entrada <- getLine
+    case words entrada of
+      [origem, destino] ->
+        case (lerPos origem, lerPos destino) of
+          (Just de, Just para) ->
+            if para `elem` map fst (capturasPossiveis tab j de) || para `elem` movimentosPeca tab j de
+              then jogar (mover tab de para) (proximo j) (ehHumanoA, ehHumanoB)
+              else putStrLn "Movimento inválido." >> jogar tab j (ehHumanoA, ehHumanoB)
+          _ -> erro
+      _ -> erro
+  else do
+    putStrLn "IA está pensando..."
+    threadDelay 500000
+    case jogadaIA tab j of
+      Just (de, para) -> do
+        putStrLn $ "IA jogou de " ++ showPos de ++ " para " ++ showPos para
+        jogar (mover tab de para) (proximo j) (ehHumanoA, ehHumanoB)
+      Nothing -> putStrLn $ "Jogador " ++ show j ++ " não possui movimentos. Fim de jogo."
+  where
+    proximo A = B
+    proximo B = A
+    erro = putStrLn "Entrada inválida." >> jogar tab j (ehHumanoA, ehHumanoB)
+    showPos (l,c) = [chr (c + 65)] ++ show (8 - l)
+
+-- Menu
+menu :: IO ()
+menu = do
+  putStrLn "\n== JOGO DE DAMAS =="
+  putStrLn "1 - Jogar contra IA"
+  putStrLn "2 - Ver IA vs IA"
+  putStrLn "3 - Sair"
+  putStr "Escolha: "
+  hFlush stdout
+  op <- getLine
+  case op of
+    "1" -> do
+      putStr "Quer ser o jogador A ou B? "
+      hFlush stdout
+      j <- getLine
+      case map toUpper j of
+        "A" -> jogar tabuleiroInicial A (True, False)
+        "B" -> jogar tabuleiroInicial A (False, True)
+        _   -> putStrLn "Escolha inválida." >> menu
+    "2" -> jogar tabuleiroInicial A (False, False)
+    "3" -> putStrLn "Saindo..."
+    _   -> putStrLn "Opção inválida." >> menu
+
+main :: IO ()
+main = do
+  putStrLn "Bem-vindo ao jogo de Damas!"
+  menu
