@@ -143,3 +143,4 @@ jogadaIA tab j =
                 dest <- movimentosPeca tab j (l,c) ]
   in if null poss then Nothing else Just (head poss)
 
+  jogar :: Tabuleiro -> Jogador -> (Bool, Bool) -> IO ()
