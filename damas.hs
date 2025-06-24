@@ -108,3 +108,18 @@ capturasPossiveis tab j (l,c) =
     Just (Peca _ Dama) ->
       concatMap (buscaDama (l,c)) todosSaltos
     _ -> []
+
+setar :: Tabuleiro -> Pos -> Casa -> Tabuleiro
+setar tab (l,c) val =
+  take l tab ++ [take c (tab !! l) ++ [val] ++ drop (c+1) (tab !! l)] ++ drop (l+1) tab
+
+mover :: Tabuleiro -> Pos -> Pos -> Tabuleiro
+mover tab de para =
+  let Just (Peca j t) = emJogo tab de
+      t' = if (j == A && fst para == 7) || (j == B && fst para == 0) then Dama else t
+      limpa = setar tab de (Escura Nothing)
+      capt = if abs (fst para - fst de) == 2
+             then let meio = ((fst de + fst para) `div` 2, (snd de + snd para) `div` 2)
+                  in setar limpa meio (Escura Nothing)
+             else limpa
+  in setar capt para (Escura (Just (Peca j t')))
