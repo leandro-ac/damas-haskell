@@ -159,10 +159,10 @@ jogadaIA tab j =
   in if null poss then Nothing else Just (head poss)
 
 -- Loop principal do jogo
--- Exibe tabuleiro, lê jogada do jogador humano ou IA, verifica validade e alterna turnos
+-- Exibe tabuleiro, lê jogada do jogador humano ou IA, verifica validade e alterna vezes
 jogar :: Tabuleiro -> Jogador -> (Bool, Bool) -> IO ()
 jogar tab j (ehHumanoA, ehHumanoB) = do
-  putStrLn $ "\nTurno do jogador: " ++ show j
+  putStrLn $ "\nVez do jogador: " ++ show j
   putStrLn $ mostrarTabuleiro tab
   let humano = if j == A then ehHumanoA else ehHumanoB
   if humano then do
@@ -195,29 +195,27 @@ jogar tab j (ehHumanoA, ehHumanoB) = do
     showPos (l,c) = [chr (c + 65)] ++ show (l + 1)
 
 -- Menu principal do jogo
-menu :: IO ()
-menu = do
-  putStrLn "\n== JOGO DE DAMAS =="
-  putStrLn "1 - Jogar contra IA"
-  putStrLn "2 - Ver IA vs IA"
-  putStrLn "3 - Sair"
-  putStr "Escolha: "
-  hFlush stdout
-  op <- getLine
-  case op of
-    "1" -> do
-      putStr "Quer ser o jogador A ou B? "
-      hFlush stdout
-      j <- getLine
-      case map toUpper j of
-        "A" -> jogar tabuleiroInicial A (True, False)
-        "B" -> jogar tabuleiroInicial B (False, True)
-        _   -> putStrLn "Escolha inválida." >> menu
-    "2" -> jogar tabuleiroInicial A (False, False)
-    "3" -> putStrLn "Saindo..."
-    _   -> putStrLn "Opção inválida." >> menu
-
 main :: IO ()
 main = do
-  putStrLn "Bem-vindo ao jogo de Damas!"
-  menu
+  loop
+  where
+    loop = do
+      putStrLn "\n== JOGO DE DAMAS =="
+      putStrLn "1 - Jogar contra IA"
+      putStrLn "2 - Ver IA vs IA"
+      putStrLn "3 - Sair"
+      putStr "Escolha: "
+      hFlush stdout
+      op <- getLine
+      case op of
+        "1" -> do
+          putStr "Quer ser o jogador A ou B? "
+          hFlush stdout
+          j <- getLine
+          case map toUpper j of
+            "A" -> jogar tabuleiroInicial A (True, False)
+            "B" -> jogar tabuleiroInicial B (False, True)
+            _   -> putStrLn "Escolha inválida." >> loop
+        "2" -> jogar tabuleiroInicial A (False, False)
+        "3" -> putStrLn "Saindo..."
+        _   -> putStrLn "Opção inválida." >> loop
