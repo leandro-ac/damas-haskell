@@ -123,3 +123,9 @@ mover tab de para =
                   in setar limpa meio (Escura Nothing)
              else limpa
   in setar capt para (Escura (Just (Peca j t')))
+
+lerPos :: String -> Maybe Pos
+lerPos [col, lin]
+  | toUpper col `elem` ['A'..'H'], lin `elem` ['1'..'8'] =
+      Just (8 - (ord lin - ord '0'), ord (toUpper col) - ord 'A')
+lerPos _ = Nothing
