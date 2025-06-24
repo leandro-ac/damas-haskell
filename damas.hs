@@ -78,3 +78,14 @@ movimentosPeca tab j (l,c) =
 
 -- No momento da movimentação:
 t' = if (j == A && fst para == 7) || (j == B && fst para == 0) then Dama else t
+
+todosSaltos :: [(Int, Int)]
+todosSaltos = [(-1,-1), (-1,1), (1,-1), (1,1)]
+
+movimentosPeca tab j (l,c) = ...
+  Just (Peca _ Dama) ->
+    [ (l+i*dl, c+i*dc) |
+      (dl,dc) <- todosSaltos, i <- [1..7],
+      let pos = (l+i*dl, c+i*dc),
+      dentro pos,
+      emJogo tab pos == Nothing ]
