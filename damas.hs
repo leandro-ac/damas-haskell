@@ -75,3 +75,6 @@ movimentosPeca tab j (l,c) =
         dentro (l+dl, c+dc),
         emJogo tab (l+dl, c+dc) == Nothing ]
     _ -> []
+
+-- No momento da movimentação:
+t' = if (j == A && fst para == 7) || (j == B && fst para == 0) then Dama else t
