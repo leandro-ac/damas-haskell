@@ -3,6 +3,8 @@
 -- Leandro ALvares de Carvalho 202065211A
 -- Vinicius ....
 
+import Data.Char (chr, ord)
+
 module Main where
 
 -- Tipos que representam os jogadores, peças, casas e tabuleiro
@@ -26,3 +28,19 @@ tabuleiroInicial = [ [inicial l c | c <- [0..7]] | l <- [0..7] ]
       | l <= 2 = Just (Peca A Piao)
       | l >= 5 = Just (Peca B Piao)
       | otherwise = Nothing
+
+-- Converte uma casa do tabuleiro em um símbolo visível no terminal
+mostrarCasa :: Casa -> String
+mostrarCasa Clara = " . "
+mostrarCasa (Escura Nothing) = "   "
+mostrarCasa (Escura (Just (Peca A Piao))) = " a "
+mostrarCasa (Escura (Just (Peca A Dama))) = " A "
+mostrarCasa (Escura (Just (Peca B Piao))) = " b "
+mostrarCasa (Escura (Just (Peca B Dama))) = " B "
+
+-- Imprime o tabuleiro com letras (A–H) e números (1–8)
+mostrarTabuleiro :: Tabuleiro -> String
+mostrarTabuleiro tab =
+  let cabecalho = "   " ++ concat [ " " ++ [chr (c + 65)] ++ " " | c <- [0..7] ]
+      linhas = [ show (8 - r) ++ " " ++ concatMap mostrarCasa linha | (r, linha) <- zip [0..] (reverse tab) ]
+  in unlines (cabecalho : linhas)
