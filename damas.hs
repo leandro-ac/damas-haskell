@@ -89,3 +89,22 @@ movimentosPeca tab j (l,c) = ...
       let pos = (l+i*dl, c+i*dc),
       dentro pos,
       emJogo tab pos == Nothing ]
+
+ehAdversario :: Jogador -> Maybe Peca -> Bool
+ehAdversario j (Just (Peca j' _)) = j /= j'
+ehAdversario _ _ = False
+
+capturasPossiveis :: Tabuleiro -> Jogador -> Pos -> [(Pos, Pos)]
+capturasPossiveis tab j (l,c) =
+  case emJogo tab (l,c) of
+    Just (Peca _ Piao) -> 
+      [ ((l+2*dl, c+2*dc), (l+dl, c+dc)) |
+        (dl,dc) <- todosSaltos,
+        let alvo = (l+dl, c+dc),
+        let dest = (l+2*dl, c+2*dc),
+        dentro alvo, dentro dest,
+        ehAdversario j (emJogo tab alvo),
+        emJogo tab dest == Nothing ]
+    Just (Peca _ Dama) ->
+      concatMap (buscaDama (l,c)) todosSaltos
+    _ -> []
