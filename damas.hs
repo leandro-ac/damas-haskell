@@ -1,6 +1,7 @@
 -- Jogo de Damas em Haskell
--- Leandro Alvares de Carvalho 202065211A
--- Vinicius
+
+-- Leandro Alvares de Carvalho - 202065211A
+-- Vinicius da Silva Fortes - 201935029
 
 import Data.Char (toUpper, chr, ord)
 import Data.Maybe (isJust)
